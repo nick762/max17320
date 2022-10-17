@@ -28,7 +28,6 @@ uint8_t MAX17320::_cellNum(){
 	}else{
 		return 0;
 	}
-	return num;
 }	
 		
 uint16_t MAX17320::_readReg(uint8_t lsb, uint8_t msb)
@@ -59,11 +58,26 @@ void MAX17320::_writeData(uint8_t lsb, uint8_t msb, uint8_t* data){
 		_max320.write(data[0]);
 		_max320.write(data[1]);
 		delay(25);
-		//_max320.write(data[i],1);
-		//for(int i=0; i<8; i++){
-		//	_max320.write(data[i],1);
-		//}
 	}
+}
+
+void MAX17320::_fReset()
+{ 
+	byte cmd1[] = {0x00,0x00};
+	byte cmd2[] = {0x0f,0x00};
+	byte cmd3[] = {0x80,0x00};
+	byte cmd4[] = {0xf9,0x00};
+	
+	_writeData(0x61,0x00, cmd1);
+	_writeData(0x61,0x00, cmd1);
+	_writeData(0x60,0x00, cmd2);
+	delay(10);
+	_writeData(0x61,0x00, cmd1);
+	_writeData(0x61,0x00, cmd1);
+	_writeData(0xAB,0x00, cmd3);
+	delay(50);
+	_writeData(0x61,0x00, cmd4);
+	delay(10);
 }
 
 uint8_t MAX17320::_readType()
@@ -89,7 +103,8 @@ uint16_t MAX17320::_readFCap(){
 	}else if(rSense == 2000){
 		return capacity * 0.25F;
 	}else{
-		return -1;		
+		//return -1;	
+		return capacity * ((156250 / rSense ) / 10) / 100;		
 	}
 }
 	
@@ -109,7 +124,9 @@ int MAX17320::_readCurrent(){
 	}else if(rSense == 2000){
 		return current * 7.8125F / 100;
 	}else{
-		return -1;		
+		//return -1;
+		//return current * 28.935F / 100;
+		return current * ((156250 / rSense ) / 10) / 100;
 	}
 }
 
@@ -175,21 +192,31 @@ String MAX17320::GetData()
 	stat = 0;
 	date = 0;
 	uint8_t num  = _cellNum();
-	if(num == 2){
-		c1v = _readCell1();
-		c2v = _readCell2();
-		c3v = 0;
-		c4v = 0;
-	}else if(num ==3){
-		c1v = _readCell1();
-		c2v = _readCell2();
-		c3v = _readCell3();
-		c4v = 0;
-	}else if(num == 4){
-		c1v = _readCell1();
-		c2v = _readCell2();
-		c3v = _readCell3();
-		c4v = _readCell4();	
+	switch(num){
+		case 2:
+			c1v = _readCell1();
+			c2v = _readCell2();
+			c3v = 0;
+			c4v = 0;
+			break;
+		case 3:
+			c1v = _readCell1();
+			c2v = _readCell2();
+			c3v = _readCell3();
+			c4v = 0;
+			break;
+		case 4:
+			c1v = _readCell1();
+			c2v = _readCell2();
+			c3v = _readCell3();
+			c4v = _readCell4();	
+			break;
+		default:
+			c1v = 0;
+			c2v = 0;
+			c3v = 0;
+			c4v = 0;
+			break;
 	}
 	{
 		data = voltage+comm+current+comm+temperature+comm+capacity+comm+c1v+comm+c2v+comm+c3v+comm+c4v+comm+ser+comm+stat+comm+date+comm+fCap;
